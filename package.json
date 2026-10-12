@@ -1,15 +1,15 @@
 {
   "name": "bubble-music",
   "version": "1.0.0",
-  "description": "App de música libre sin Spotify Premium Bv",
+  "description": "App de musica libre",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "axios": "^1.6.0",
     "express": "^4.18.2",
     "isomorphic-unfetch": "^4.0.2",
-    "spotify-url-info": "^3.2.9"
+    "spotify-url-info": "^3.2.9",
+    "yt-search": "^2.10.4"
   }
 }
