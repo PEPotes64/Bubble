@@ -1,14 +1,14 @@
 const express = require('express');
-const axios = require('axios');
 const path = require('path');
 const fetch = require('isomorphic-unfetch');
 const { getTracks } = require('spotify-url-info')(fetch);
+const yts = require('yt-search');
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '/')));
 
-// 1. Extraer TODAS las rolas de la URL pública
+// Extraer rolas de la playlist
 app.post('/api/convertir-url', async (req, res) => {
   try {
     const { url } = req.body;
@@ -21,53 +21,33 @@ app.post('/api/convertir-url', async (req, res) => {
       } else if (track.artist) {
         artista = track.artist;
       }
-
-      const titulo = track.name || 'Canción desconocida';
+      const titulo = track.name || 'Cancion desconocida';
       const query = artista ? `${titulo} ${artista}` : titulo;
-
       return { titulo, artista, query };
     });
 
     res.json({ exito: true, canciones });
   } catch (error) {
-    res.status(500).json({ exito: false, error: 'Valió gorro al leer la playlist :v' });
+    res.status(500).json({ exito: false, error: 'Valio gorro al leer la playlist :v' });
   }
 });
 
-// 2. Buscar en YouTube con múltiples servidores públicos de respaldo
+// Buscar en YouTube con yt-search (100% estable sin API Key)
 app.post('/api/buscar-yt', async (req, res) => {
-  const { query } = req.body;
-  
-  // Lista de instancias públicas de Invidious / Piped
-  const instancias = [
-    'https://inv.hostux.net/api/v1/search',
-    'https://invidious.nerdvpn.de/api/v1/search',
-    'https://pipedapi.kavin.rocks/search'
-  ];
-
-  for (const apiURL of instancias) {
-    try {
-      const isPiped = apiURL.includes('piped');
-      const params = isPiped ? { q: query, filter: 'videos' } : { q: query, type: 'video' };
-      
-      const ytRes = await axios.get(apiURL, { params, timeout: 3500 });
-
-      if (ytRes.data && ytRes.data.length > 0) {
-        const item = ytRes.data[0];
-        const videoId = item.videoId || (item.url ? item.url.split('v=')[1] : null);
-        if (videoId) return res.json({ videoId });
-      } else if (ytRes.data && ytRes.data.items && ytRes.data.items.length > 0) {
-        const item = ytRes.data.items[0];
-        const videoId = item.url ? item.url.split('v=')[1] : null;
-        if (videoId) return res.json({ videoId });
-      }
-    } catch (e) {
-      continue; // Probar siguiente servidor
+  try {
+    const { query } = req.body;
+    const r = await yts(query);
+    const videos = r.videos;
+    
+    if (videos && videos.length > 0) {
+      res.json({ videoId: videos[0].videoId });
+    } else {
+      res.status(404).json({ error: 'No se encontro en youtube >:v' });
     }
+  } catch (error) {
+    res.status(500).json({ error: 'Fallo al buscar en youtube >:v' });
   }
-
-  res.status(500).json({ error: 'No se encontró la rola en YouTube >:v' });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Bubble Music corriendo en puerto ${PORT} Bv`));
+app.listen(PORT, () => console.log(`🫧Bubble Music🫧 corriendo en puerto ${PORT} Bv`));
