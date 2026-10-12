@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bubble Music - Prototipo</title>
+  <title>Bubble Music</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0a0a0c">
 </head>
 <body style="background: #0a0a0c; color: #fff; font-family: sans-serif; padding: 20px;">
 
   <h1>Bubble Music 🫧</h1>
-  <p>Pegá el link público de tu playlist de Spotify:</p>
+  <p>Pega el link publico de tu playlist de Spotify:</p>
   
   <input type="text" id="urlInput" placeholder="https://open.spotify.com/playlist/..." style="width: 80%; padding: 10px;">
   <button onclick="cargarPlaylist()" style="padding: 10px;">Cargar Rolas Bv</button>
@@ -19,9 +19,9 @@
 
   <div id="status">Esperando URL...</div>
 
-  <!-- Contenedor del Iframe de YouTube Directo -->
-  <div id="playerContainer" style="margin-top: 20px;">
-    <iframe id="ytIframe" width="100%" height="210" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="display:none; border-radius:10px;"></iframe>
+  <!-- Reproductor fijo para que nunca desaparezca -->
+  <div style="margin-top: 20px; background: #16161a; padding: 10px; border-radius: 12px;">
+    <iframe id="ytIframe" width="100%" height="200" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="border-radius:8px;"></iframe>
   </div>
 
   <ul id="listaCanciones" style="margin-top: 15px;"></ul>
@@ -32,9 +32,9 @@
       const status = document.getElementById('status');
       const lista = document.getElementById('listaCanciones');
 
-      if (!url) return alert('Pegá una URL primero cerote :v');
+      if (!url) return alert('Pega una URL primero cerote :v');
 
-      status.innerText = 'Extrayendo canciones de la playlist...';
+      status.innerText = 'Extrayendo canciones...';
       lista.innerHTML = '';
 
       try {
@@ -47,7 +47,7 @@
         const data = await res.json();
 
         if (data.exito) {
-          status.innerText = '¡Éxito! Se encontraron ' + data.canciones.length + ' rolas. Tocá una para sonar:';
+          status.innerText = 'Exito! Se encontraron ' + data.canciones.length + ' rolas. Toca una para sonar:';
           
           data.canciones.forEach((cancion) => {
             const li = document.createElement('li');
@@ -62,7 +62,7 @@
           status.innerText = 'Error: ' + data.error;
         }
       } catch (err) {
-        status.innerText = 'Valió gorro el servidor :v';
+        status.innerText = 'Valio gorro el servidor :v';
       }
     }
 
@@ -81,14 +81,12 @@
         const data = await res.json();
         if (data.videoId) {
           status.innerText = 'Sonando: ' + query + ' Bv';
-          iframe.style.display = 'block';
-          // Cargar iframe con autoplay activado
-          iframe.src = 'https://www.youtube.com/embed/' + data.videoId + '?autoplay=1&enablejsapi=1';
+          iframe.src = 'https://www.youtube.com/embed/' + data.videoId + '?autoplay=1';
         } else {
-          status.innerText = 'No se encontró la rola >:v';
+          status.innerText = 'No se encontro la rola >:v';
         }
       } catch (err) {
-        status.innerText = 'Error al conectar con el servidor :v';
+        status.innerText = 'Error al conectar :v';
       }
     }
   </script>
