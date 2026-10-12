@@ -1,66 +1,67 @@
 const express = require('express');
 const path = require('path');
-const fetch = require('isomorphic-unfetch');
-const { getTracks } = require('spotify-url-info')(fetch);
+const axios = require('axios');
 const yts = require('yt-search');
 
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '/')));
 
-// Extraer TODAS las rolas posibles barriendo el embed completo
+const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
+const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
+
+// Obtener token de acceso de Spotify (Gratis)
+async function getSpotifyToken() {
+  const credentials = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
+  const response = await axios.post('https://accounts.spotify.com/api/token', 'grant_type=client_credentials', {
+    headers: {
+      'Authorization': `Basic ${credentials}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
+  });
+  return response.data.access_token;
+}
+
+// Extraer TODAS las rolas paginando la API oficial de Spotify
 app.post('/api/convertir-url', async (req, res) => {
   try {
     let { url } = req.body;
-    if (!url) return res.status(400).json({ exito: false, error: 'Poné una URL mano :v' });
+    const match = url.match(/playlist\/([a-zA-Z0-9]+)/);
+    if (!match) return res.status(400).json({ exito: false, error: 'URL toda mela, revisala mano :v' });
+
+    const playlistId = match[1];
+    const token = await getSpotifyToken();
 
     let tracks = [];
-    
-    // Intentar extraer con getTracks
-    try {
-      tracks = await getTracks(url);
-    } catch (e) {
-      console.log('Facheó el método 1, tirando del embed directo...');
-    }
+    let urlApi = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
 
-    // Si faltan rolas o falló, le caemos al JSON embebido de Spotify
-    const match = url.match(/playlist\/([a-zA-Z0-9]+)/);
-    if (match && match[1]) {
-      const playlistId = match[1];
-      const embedRes = await fetch(`https://open.spotify.com/embed/playlist/${playlistId}`);
-      const html = await embedRes.text();
+    // Ciclo para traer todas las páginas si pasan de 100 canciones
+    while (urlApi) {
+      const response = await axios.get(urlApi, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       
-      const matchJson = html.match(/<script id="resource" type="application\/json">(.*?)<\/script>/);
-      if (matchJson && matchJson[1]) {
-        const data = JSON.parse(decodeURIComponent(matchJson[1]));
-        if (data && data.tracks && data.tracks.length > tracks.length) {
-          tracks = data.tracks;
+      const items = response.data.items;
+      items.forEach(item => {
+        if (item.track) {
+          tracks.push(item.track);
         }
-      }
-    }
+      });
 
-    if (!tracks || tracks.length === 0) {
-      return res.status(404).json({ exito: false, error: 'No se encontraron rolas o la playlist es privada >:v' });
+      urlApi = response.data.next; // Salta a la siguiente página automáticamente
     }
 
     const canciones = tracks.map(track => {
-      let artista = '';
-      if (track.artists && track.artists.length > 0) {
-        artista = typeof track.artists[0] === 'string' ? track.artists[0] : (track.artists[0].name || '');
-      } else if (track.artist) {
-        artista = track.artist;
-      }
-      
-      const titulo = track.name || 'Canción desconocida';
+      let artista = track.artists && track.artists.length > 0 ? track.artists[0].name : '';
+      const titulo = track.name || 'Cancion desconocida';
       const query = artista ? `${titulo} ${artista}` : titulo;
-      
       return { titulo, artista, query };
     });
 
     res.json({ exito: true, canciones, total: canciones.length });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ exito: false, error: 'Valió gorro al leer la playlist completa :v' });
+    res.status(500).json({ exito: false, error: 'Valio gorro al traer todas las rolas con la API :v' });
   }
 });
 
@@ -74,10 +75,10 @@ app.post('/api/buscar-yt', async (req, res) => {
     if (videos && videos.length > 0) {
       res.json({ videoId: videos[0].videoId });
     } else {
-      res.status(404).json({ error: 'No se encontró en YouTube >:v' });
+      res.status(404).json({ error: 'No se encontro en youtube >:v' });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Falló al buscar en YouTube >:v' });
+    res.status(500).json({ error: 'Fallo al buscar en youtube >:v' });
   }
 });
 
