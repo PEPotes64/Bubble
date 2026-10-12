@@ -55,7 +55,8 @@
           
           data.canciones.forEach((cancion) => {
             const li = document.createElement('li');
-            li.innerText = `${cancion.titulo} - ${cancion.artista}`;
+            // Usamos concatenación normal para no chingar con comillas ni backticks en el cel :v
+            li.innerText = cancion.titulo + ' - ' + (cancion.artista || 'Desconocido');
             li.style.cursor = 'pointer';
             li.style.padding = '5px 0';
             li.onclick = () => reproducirEnYoutube(cancion.query);
@@ -75,20 +76,24 @@
 
     async function reproducirEnYoutube(query) {
       const status = document.getElementById('status');
-      status.innerText = `Buscando en YouTube: ${query}...`;
+      status.innerText = 'Buscando: ' + query + '...';
 
-      const res = await fetch('/api/buscar-yt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query })
-      });
+      try {
+        const res = await fetch('/api/buscar-yt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query })
+        });
 
-      const data = await res.json();
-      if (data.videoId) {
-        status.innerText = `Sonando: ${query} Bv`;
-        player.loadVideoById(data.videoId);
-      } else {
-        status.innerText = 'No se encontró en YouTube >:v';
+        const data = await res.json();
+        if (data.videoId) {
+          status.innerText = 'Reproduciendo: ' + query + ' Bv';
+          player.loadVideoById(data.videoId);
+        } else {
+          status.innerText = 'No se encontró la rola >:v';
+        }
+      } catch (err) {
+        status.innerText = 'Error al conectar con el servidor :v';
       }
     }
   </script>
